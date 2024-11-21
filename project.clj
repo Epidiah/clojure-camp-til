@@ -4,6 +4,8 @@
                  [http-kit "2.9.0-alpha1"]
                  [ring/ring-defaults "0.5.0"]
                  [io.github.nextjournal/markdown "0.6.157"]
+                 [girouette "0.0.10"]
+                 [girouette/processor "0.0.8"]
                  [datalevin "0.9.12"]]
   ;; Datalevin needs these.
   :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
