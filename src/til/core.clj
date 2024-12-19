@@ -33,18 +33,23 @@
 (def conn (d/get-conn "./db" schema))
 
 (defn index-page [user-id]
-  (let [user (d/q '[:find (pull ?user [*]) .
-                    :in $ ?id
-                    :where
-                    [?user :user/id ?id]]
-                  (d/db conn)
-                  user-id)]
+  (let [user (when user-id
+               (d/q '[:find (pull ?user [*]) .
+                     :in $ ?id
+                     :where
+                     [?user :user/id ?id]]
+                   (d/db conn)
+                   user-id))]
     [:html
      [:head
       [:link {:rel "stylesheet" :href "/styles.css"}]]
      [:body
       (if user
-        [:div (:user/email user)]
+        [:div.flex.gap-1
+         [:div (:user/email user)]
+         [:form {:method "post"
+                 :action "/session/delete"}
+          [:button "×"]]]
         [:form {:method "post"
                 :action "/session/new"}
          [:input {:hidden true
@@ -109,6 +114,12 @@
       {:status  302
        :headers {"Location" "/"}
        :session {:user-id user-id}})
+
+    (and (= :post (:request-method req))
+         (= "/session/delete" (:uri req)))
+    {:status  302
+     :headers {"Location" "/"}
+     :session nil}
 
     (and (= :get (:request-method req))
          (= "/" (:uri req)))
