@@ -56,9 +56,10 @@
                   :name   "email"
                   :value  "alice@example.com"}]
          [:button "Log In"]])
-      [:form {:method "post"}
-       [:textarea {:name "content"}]
-       [:button "Submit"]]
+      (when user
+        [:form {:method "post"}
+         [:textarea {:name "content"}]
+         [:button "Submit"]])
       [:div.space-y-4.mx-4
        (for [{:post/keys [content created-at] :as post}
              (->> (d/q '[:find [(pull ?e [* {:user/_post [:user/email]}]) ...]
