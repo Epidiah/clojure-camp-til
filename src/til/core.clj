@@ -19,11 +19,16 @@
 
 (defonce server (atom nil))
 
-(def schema {:post/content {:db/valueType :db.type/string}
-             :user/id      {:db/valueType :db.type/uuid
-                            :db/unique    :db.unique/identity}
-             :user/email   {:db/valueType :db.type/string
-                            :db/unique    :db.unique/identity}})
+(def schema {:post/content    {:db/valueType :db.type/string}
+             :post/created-at {:db/valueType :db.type/instant}
+             :post/id         {:db/valueType :db.type/uuid
+                               :db/unique    :db.unique/identity}
+             :user/id         {:db/valueType :db.type/uuid
+                               :db/unique    :db.unique/identity}
+             :user/post       {:db/valueType   :db.type/ref
+                               :db/cardinality :db.cardinality/many}
+             :user/email      {:db/valueType :db.type/string
+                               :db/unique    :db.unique/identity}})
 
 (def conn (d/get-conn "./db" schema))
 
@@ -50,17 +55,26 @@
        [:textarea {:name "content"}]
        [:button "Submit"]]
       [:div.space-y-4.mx-4
-       (for [{:keys [post/content]} (d/q '[:find [(pull ?e [*]) ...]
-                                           :where
-                                           [?e :post/content _]]
-                                         (d/db conn))]
+       (for [{:post/keys [content created-at] :as post}
+             (->> (d/q '[:find [(pull ?e [* {:user/_post [:user/email]}]) ...]
+                         :where
+                         [?e :post/content _]]
+                       (d/db conn))
+                  (sort-by :post/created-at)
+                  reverse)
+             :let [user-email (get-in post [:user/_post 0 :user/email])]]
               [:section.p-4.rounded.border
-               (-> content
-                   md/parse
-                   md.transform/->hiccup)])]]]))
+               [:div (-> content
+                         md/parse
+                         md.transform/->hiccup)]
+               [:div (str created-at)]
+               [:div user-email]])]]]))
 
-(defn create-post! [content]
-  (d/transact! conn [{:post/content content}]))
+(defn create-post! [content user-id]
+  (d/transact! conn [{:post/content    content
+                      :post/id         (random-uuid)
+                      :user/_post      [:user/id user-id]
+                      :post/created-at (java.util.Date.)}]))
 
 (defn handler [req]
   (cond
@@ -72,8 +86,9 @@
 
     (and (= :post (:request-method req))
          (= "/" (:uri req)))
-    (let [content (get-in req [:form-params "content"])]
-      (create-post! content)
+    (let [content (get-in req [:form-params "content"])
+          user-id (get-in req [:session :user-id])]
+      (create-post! content user-id)
       {:status  302
        :headers {"Location" "/"}})
 
