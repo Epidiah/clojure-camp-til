@@ -12,10 +12,13 @@
 
 (def redirect-uri "/session/new")
 
-(def config-schema [:map
-                    [:client-id :string]
-                    [:client-secret :string]
-                    [:domain :string]])
+(def config-schema [:or
+                    [:map
+                     [:client-id :string]
+                     [:client-secret :string]
+                     [:domain :string]]
+                    [:map
+                     [:dummy-email :string]]])
 
 (def oauth-config
   (let [config (-> (slurp "config.edn")
@@ -100,7 +103,7 @@
                             :user/email email}])
         id)))
 
-(defn handler [req]
+(defn prod-handler [req]
   (when (and (= :get (:request-method req))
              (= redirect-uri (:uri req)))
     (if-let [code (get-in req [:params :code])]
@@ -123,3 +126,16 @@
          :body    "Oauth state incorrect"})
       {:status  302
        :headers {"Location" (request-token-url oauth-config)}})))
+
+(defn dev-handler [req]
+ (when (and (= :get (:request-method req))
+            (= redirect-uri (:uri req)))
+   (let [user-id (get-or-create-user! (:db-conn req) (:dummy-email oauth-config))]
+     {:status 302
+     :headers {"Location" "/"}
+     :session {:user-id user-id}})))
+
+(defn handler [req]
+  (if (:dummy-email oauth-config)
+    (dev-handler req)
+    (prod-handler req)))
