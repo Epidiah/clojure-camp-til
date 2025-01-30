@@ -1,5 +1,6 @@
 (ns til.core
   (:require
+   [til.oauth :as oauth]
    [org.httpkit.server :as http]
    [huff2.core :as h]
    [datalevin.core :as d]
@@ -50,7 +51,7 @@
          [:form {:method "post"
                  :action "/session/delete"}
           [:button "×"]]]
-        [:form {:method "post"
+        [:form {:method "get"
                 :action "/session/new"}
          [:input {:hidden true
                   :name   "email"
@@ -83,54 +84,38 @@
                       :post/created-at (java.util.Date.)}]))
 
 (defn handler [req]
-  (cond
-    (and (= :get (:request-method req))
-         (= "/styles.css" (:uri req)))
-    {:status  200
-     :headers {"Content-Type" "text/css"}
-     :body    (slurp (get-in css-opts [:css :output-file]))}
+  (or
+   (oauth/handler (assoc req :db-conn conn))
+   (cond
+     (and (= :get (:request-method req))
+          (= "/styles.css" (:uri req)))
+     {:status  200
+      :headers {"Content-Type" "text/css"}
+      :body    (slurp (get-in css-opts [:css :output-file]))}
 
-    (and (= :post (:request-method req))
-         (= "/" (:uri req)))
-    (let [content (get-in req [:form-params "content"])
-          user-id (get-in req [:session :user-id])]
-      (create-post! content user-id)
-      {:status  302
-       :headers {"Location" "/"}})
+     (and (= :post (:request-method req))
+          (= "/" (:uri req)))
+     (let [content (get-in req [:form-params "content"])
+           user-id (get-in req [:session :user-id])]
+       (create-post! content user-id)
+       {:status  302
+        :headers {"Location" "/"}})
 
-    (and (= :post (:request-method req))
-         (= "/session/new" (:uri req)))
-    (let [email   (get-in req [:form-params "email"])
-          user-id (or (d/q '[:find ?id .
-                             :in $ ?email
-                             :where
-                             [?user :user/email ?email]
-                             [?user :user/id ?id]]
-                           (d/db conn)
-                           email)
-                      (let [id (random-uuid)]
-                        (d/transact! conn [{:user/id    id
-                                            :user/email email}])
-                        id))]
-      {:status  302
-       :headers {"Location" "/"}
-       :session {:user-id user-id}})
+     (and (= :post (:request-method req))
+          (= "/session/delete" (:uri req)))
+     {:status  302
+      :headers {"Location" "/"}
+      :session nil}
 
-    (and (= :post (:request-method req))
-         (= "/session/delete" (:uri req)))
-    {:status  302
-     :headers {"Location" "/"}
-     :session nil}
+     (and (= :get (:request-method req))
+          (= "/" (:uri req)))
+     {:status  200
+      :headers {"Content-Type" "text/html"}
+      :body    (str (h/html (index-page (get-in req [:session :user-id]))))}
 
-    (and (= :get (:request-method req))
-         (= "/" (:uri req)))
-    {:status  200
-     :headers {"Content-Type" "text/html"}
-     :body    (str (h/html (index-page (get-in req [:session :user-id]))))}
-
-    :else
-    {:status 404
-     :body "This is not the page you're looking for."}))
+     :else
+     {:status 404
+      :body "This is not the page you're looking for."})))
 
 (def app
   (rmd/wrap-defaults handler

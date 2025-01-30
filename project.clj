@@ -2,6 +2,7 @@
   :dependencies [[org.clojure/clojure "1.12.0"]
                  [io.github.escherize/huff "0.2.12"]
                  [http-kit "2.9.0-alpha1"]
+                 [metosin/malli "0.17.0"]
                  [ring/ring-defaults "0.5.0"]
                  [io.github.nextjournal/markdown "0.6.157"]
                  [girouette "0.0.10"]

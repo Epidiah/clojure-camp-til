@@ -3,3 +3,4 @@
 target/
 db/
 todo.md
+config.edn
