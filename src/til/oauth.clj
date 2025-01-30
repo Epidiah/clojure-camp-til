@@ -3,9 +3,12 @@
   [clojure.data.json :as json]
   [clojure.edn :as edn]
   [datalevin.core :as d]
+  [taoensso.tempel :as tempel]
   [malli.core :as m]
   [org.httpkit.client :as http]
-  [ring.util.codec :refer [form-encode]]))
+  [ring.util.codec :refer [form-encode]])
+ (:import
+  [java.util Base64]))
 
 (def redirect-uri "/session/new")
 
@@ -20,14 +23,44 @@
                    :oauth)]
     (when config
       (m/assert config-schema config))
-    (assoc config :redirect-uri (str (:domain config) redirect-uri))))
+    (assoc config
+           :redirect-uri (str (:domain config) redirect-uri)
+           :nonce-password (str (random-uuid)))))
+
+;; Oauth requires a state parameter.
+;; We will encrypt a value and check if it can be decrypted.
+;; The value itself doesn't matter.
+;; (The encryption we're using generates a unique message each time,
+;; which prevents replay attacks.)
+
+(defn nonce-generate []
+  (.encodeToString
+   (Base64/getUrlEncoder)
+   (tempel/encrypt-with-password
+    (byte-array [0])
+    (:nonce-password oauth-config))))
+
+(defn nonce-check [encrypted]
+  (try (boolean
+        (tempel/decrypt-with-password
+         (.decode (Base64/getUrlDecoder)
+                  (.getBytes encrypted))
+         (:nonce-password oauth-config)))
+       (catch Exception _e
+         nil)))
+
+(comment
+  (nonce-generate)
+  (nonce-check (nonce-generate))
+  (nonce-check "random")
+ )
 
 (defn request-token-url [{:keys [client-id redirect-uri]}]
   (str "https://github.com/login/oauth/authorize?"
-       (form-encode {; :state to-do
-                     :client_id client-id
+       (form-encode {:state        (nonce-generate)
+                     :client_id    client-id
                      :redirect_uri redirect-uri
-                     :scope "user:email"})))
+                     :scope        "user:email"})))
 
 (defn get-access-token [{:keys [client-id redirect-uri client-secret]} code]
   (-> @(http/request
@@ -71,17 +104,22 @@
   (when (and (= :get (:request-method req))
              (= redirect-uri (:uri req)))
     (if-let [code (get-in req [:params :code])]
-      ; TODO: Verify state
-      (if-let [email (get-email oauth-config code)]
-        (if-let [user-id (get-or-create-user!
-                          (:db-conn req)
-                          email)]
-          {:status  302
-           :headers {"Location" "/"}
-           :session {:user-id user-id}}
-          {:status 401
-           :body {:error "User denied"}})
-        {:status 401
-         :body {:error "User could not be authenticated with Google"}})
-      {:status 302
+      (if (nonce-check (get-in req [:params :state]))
+        (if-let [email (get-email oauth-config code)]
+          (if-let [user-id (get-or-create-user!
+                            (:db-conn req)
+                            email)]
+            {:status  302
+             :headers {"Location" "/"}
+             :session {:user-id user-id}}
+            {:status  401
+             :headers {"Content-Type" "text/plain"}
+             :body    "User denied"})
+          {:status  401
+           :headers {"Content-Type" "text/plain"}
+           :body    "User could not be authenticated with Google"})
+        {:status  401
+         :headers {"Content-Type" "text/plain"}
+         :body    "Oauth state incorrect"})
+      {:status  302
        :headers {"Location" (request-token-url oauth-config)}})))
