@@ -33,7 +33,7 @@
              :user/email      {:db/valueType :db.type/string
                                :db/unique    :db.unique/identity}})
 
-(def conn (d/get-conn "./db" schema))
+(def conn (delay (d/get-conn "./db" schema)))
 
 (defn index-page [user-id]
   (let [user (when user-id
@@ -41,7 +41,7 @@
                      :in $ ?id
                      :where
                      [?user :user/id ?id]]
-                   (d/db conn)
+                   (d/db @conn)
                    user-id))]
     [:html
      [:head
@@ -68,7 +68,7 @@
              (->> (d/q '[:find [(pull ?e [* {:user/_post [:user/email]}]) ...]
                          :where
                          [?e :post/content _]]
-                       (d/db conn))
+                       (d/db @conn))
                   (sort-by :post/created-at)
                   reverse)
              :let [user-email (get-in post [:user/_post 0 :user/email])]]
@@ -80,14 +80,14 @@
                [:div user-email]])]]]))
 
 (defn create-post! [content user-id]
-  (d/transact! conn [{:post/content    content
-                      :post/id         (random-uuid)
-                      :user/_post      [:user/id user-id]
-                      :post/created-at (java.util.Date.)}]))
+  (d/transact! @conn [{:post/content    content
+                       :post/id         (random-uuid)
+                       :user/_post      [:user/id user-id]
+                       :post/created-at (java.util.Date.)}]))
 
 (defn handler [req]
   (or
-   (oauth/handler (assoc req :db-conn conn))
+   (oauth/handler (assoc req :db-conn @conn))
    (cond
      (and (= :get (:request-method req))
           (= "/styles.css" (:uri req)))
@@ -144,5 +144,5 @@
   (d/q '[:find [(pull ?e [*]) ...]
                      :where
                      [?e :post/content _]]
-                   (d/db conn))
+                   (d/db @conn))
   )
