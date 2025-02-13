@@ -19,8 +19,10 @@
 (def config
   (delay
     (let [config (some-> (slurp "config.edn")
-                        edn/read-string
-                        (update :http-port (fn [port] (or (System/getenv "PORT") port))))]
+                         edn/read-string
+                         (update :http-port (fn [port] (or (some-> (System/getenv "PORT")
+                                                                   parse-long)
+                                                           port))))]
      (m/assert schema config)
      config)))
 
