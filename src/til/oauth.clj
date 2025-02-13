@@ -1,10 +1,10 @@
 (ns til.oauth
  (:require
+  [til.config :as config]
   [clojure.data.json :as json]
   [clojure.edn :as edn]
   [datalevin.core :as d]
   [taoensso.tempel :as tempel]
-  [malli.core :as m]
   [org.httpkit.client :as http]
   [ring.util.codec :refer [form-encode]])
  (:import
@@ -12,23 +12,13 @@
 
 (def redirect-uri "/session/new")
 
-(def config-schema [:or
-                    [:map
-                     [:client-id :string]
-                     [:client-secret :string]
-                     [:domain :string]]
-                    [:map
-                     [:dummy-email :string]]])
+(def nonce (str (random-uuid)))
 
-(def oauth-config
-  (let [config (-> (slurp "config.edn")
-                   edn/read-string
-                   :oauth)]
-    (when config
-      (m/assert config-schema config))
+(defn oauth-config []
+  (let [config (config/get :oauth)]
     (assoc config
            :redirect-uri (str (:domain config) redirect-uri)
-           :nonce-password (str (random-uuid)))))
+           :nonce-password nonce)))
 
 ;; Oauth requires a state parameter.
 ;; We will encrypt a value and check if it can be decrypted.
@@ -41,14 +31,14 @@
    (Base64/getUrlEncoder)
    (tempel/encrypt-with-password
     (byte-array [0])
-    (:nonce-password oauth-config))))
+    (:nonce-password (oauth-config)))))
 
 (defn nonce-check [encrypted]
   (try (boolean
         (tempel/decrypt-with-password
          (.decode (Base64/getUrlDecoder)
                   (.getBytes encrypted))
-         (:nonce-password oauth-config)))
+         (:nonce-password (oauth-config))))
        (catch Exception _e
          nil)))
 
@@ -108,7 +98,7 @@
              (= redirect-uri (:uri req)))
     (if-let [code (get-in req [:params :code])]
       (if (nonce-check (get-in req [:params :state]))
-        (if-let [email (get-email oauth-config code)]
+        (if-let [email (get-email (oauth-config) code)]
           (if-let [user-id (get-or-create-user!
                             (:db-conn req)
                             email)]
@@ -125,17 +115,17 @@
          :headers {"Content-Type" "text/plain"}
          :body    "Oauth state incorrect"})
       {:status  302
-       :headers {"Location" (request-token-url oauth-config)}})))
+       :headers {"Location" (request-token-url (oauth-config))}})))
 
 (defn dev-handler [req]
  (when (and (= :get (:request-method req))
             (= redirect-uri (:uri req)))
-   (let [user-id (get-or-create-user! (:db-conn req) (:dummy-email oauth-config))]
+   (let [user-id (get-or-create-user! (:db-conn req) (:dummy-email (oauth-config)))]
      {:status 302
      :headers {"Location" "/"}
      :session {:user-id user-id}})))
 
 (defn handler [req]
-  (if (:dummy-email oauth-config)
+  (if (:dummy-email (oauth-config))
     (dev-handler req)
     (prod-handler req)))

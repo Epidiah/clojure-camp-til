@@ -1,5 +1,7 @@
 (ns til.core
+  (:gen-class)
   (:require
+   [til.config :as config]
    [til.oauth :as oauth]
    [org.httpkit.server :as http]
    [huff2.core :as h]
@@ -128,7 +130,10 @@
 (defn start! []
   (compile-css!)
   (when @server (@server))
-  (reset! server (http/run-server #'app {:port 8123})))
+  (reset! server (http/run-server #'app {:port (config/get :http-port)})))
+
+(defn -main [& _]
+  (start!))
 
 #_(compile-css!)
 

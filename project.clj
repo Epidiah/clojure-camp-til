@@ -13,6 +13,8 @@
                  [girouette "0.0.10"]
                  [girouette/processor "0.0.8"]
                  [datalevin "0.9.18"]]
+  :profiles {:uberjar {:aot :all}}
+  :main til.core
   ;; Datalevin needs these.
   :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
              "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED"])
