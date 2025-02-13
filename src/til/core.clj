@@ -128,7 +128,7 @@
                          (assoc-in [:session :cookie-name] "clojure-camp-til"))))
 
 (defn start! []
-  (compile-css!)
+  #_(compile-css!)
   (when @server (@server))
   (reset! server (http/run-server #'app {:port (config/get :http-port)})))
 
