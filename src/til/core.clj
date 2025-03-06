@@ -121,23 +121,24 @@
       :headers {"Content-Type" "text/html"}
       :body "This is not the page you're looking for."})))
 
-(def app
-  (rmd/wrap-defaults handler
-                     (-> rmd/site-defaults
+(defn app []
+  (rmd/wrap-defaults (fn [req] (#'handler req))
+                     (-> (if (= :prod (config/get :environment))
+                           rmd/secure-site-defaults
+                           rmd/site-defaults)
                          ;; same-site should be sufficient to deal with csrf risks
                          (assoc-in [:security :anti-forgery] false)
                          (assoc-in [:session :cookie-attrs :same-site] :lax)
-                         (assoc-in [:session :cookie-name] "clojure-camp-til"))))
+                         (assoc-in [:session :cookie-name] "clojure-camp-til")
+                         (assoc-in [:proxy] (= :prod (config/get :environment))))))
 
 (defn start! []
-  #_(compile-css!)
   (when @server (@server))
-  (reset! server (http/run-server #'app {:port (config/get :http-port)})))
+  ;; Middleware will not be hot-reloaded. Need to call `start!` manually.
+  (reset! server (http/run-server (app) {:port (config/get :http-port)})))
 
 (defn -main [& _]
   (start!))
-
-#_(compile-css!)
 
 (comment
 
