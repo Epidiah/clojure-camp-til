@@ -118,6 +118,7 @@
 
      :else
      {:status 404
+      :headers {"Content-Type" "text/html"}
       :body "This is not the page you're looking for."})))
 
 (def app
