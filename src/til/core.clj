@@ -10,6 +10,7 @@
    [girouette.processor]
    [nextjournal.markdown :as md]
    [nextjournal.markdown.transform :as md.transform]
+   [ring.middleware.session.cookie :refer [cookie-store]]
    [ring.middleware.defaults :as rmd]))
 
 (def css-opts
@@ -130,6 +131,11 @@
                          (assoc-in [:security :anti-forgery] false)
                          (assoc-in [:session :cookie-attrs :same-site] :lax)
                          (assoc-in [:session :cookie-name] "clojure-camp-til")
+                         (assoc-in [:session :store]
+                                   (cookie-store {:key
+                                                  (byte-array
+                                                   (config/get :cookie-secret))}))
+                         (assoc-in [:session :cookie-attrs :max-age] (* 60 60 24 365))
                          (assoc-in [:proxy] (= :prod (config/get :environment))))))
 
 (defn start! []

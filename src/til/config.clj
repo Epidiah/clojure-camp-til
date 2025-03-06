@@ -8,6 +8,7 @@
   [:map
    [:http-port :int]
    [:environment [:enum :prod :dev]]
+   [:cookie-secret [:vector {:min 16 :max 16} :int]]
    [:oauth [:or
             [:map
              [:client-id :string]
@@ -28,3 +29,8 @@
 
 (defn get [k]
   (@config k))
+
+(comment
+  ;; for generating :cookie-secret
+  (vec (crypto.random/bytes 16))
+)
