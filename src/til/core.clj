@@ -1,6 +1,7 @@
 (ns til.core
   (:gen-class)
   (:require
+   [clojure.java.io :as io]
    [til.config :as config]
    [til.oauth :as oauth]
    [org.httpkit.server :as http]
@@ -12,7 +13,7 @@
    [ring.middleware.defaults :as rmd]))
 
 (def css-opts
-  {:css {:output-file "target/twstyles.css"}
+  {:css {:output-file "target/public/twstyles.css"}
    :input {:file-filters [".clj" ".cljs" ".cljc"]}
    :verbose? false
    :garden-fn 'girouette.tw.default-api/tw-v3-class-name->garden
@@ -93,7 +94,7 @@
           (= "/styles.css" (:uri req)))
      {:status  200
       :headers {"Content-Type" "text/css"}
-      :body    (slurp (get-in css-opts [:css :output-file]))}
+      :body    (slurp (io/resource "twstyles.css"))}
 
      (and (= :post (:request-method req))
           (= "/" (:uri req)))
