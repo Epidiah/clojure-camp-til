@@ -16,7 +16,7 @@
   :profiles {:uberjar {:aot :all
                        :prep-tasks [["run" "-m" "til.core/compile-css!"]
                                     "compile"]}}
-  :resource-paths ["target/public"]
+  :resource-paths ["target/public" "resources"]
   :main til.core
   ;; Datalevin needs these.
   :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"

@@ -1,0 +1,249 @@
+/* Based on Tailwind Typography Styles */
+.prose {
+  font-size: 16px;
+  line-height: 1.75;
+
+  p {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+  }
+
+  [class~="lead"] {
+    font-size: 1.25em;
+    line-height: 1.6;
+    margin-top: 1.2em;
+    margin-bottom: 1.2em;
+  }
+
+  blockquote {
+    margin-top: 1.6em;
+    margin-bottom: 1.6em;
+    padding-inline-start: 1em;
+  }
+
+  h1 {
+    font-size: 2.25em;
+    margin-top: 0;
+    margin-bottom: 0.889em;
+    line-height: 1.111;
+  }
+
+  h2 {
+    font-size: 1.5em;
+    margin-top: 2em;
+    margin-bottom: 1em;
+    line-height: 1.333;
+  }
+
+  h3 {
+    font-size: 1.25em;
+    margin-top: 1.6em;
+    margin-bottom: 0.6em;
+    line-height: 1.6;
+  }
+
+  h4 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    line-height: 1.5;
+  }
+
+  img {
+    margin-top: 2em;
+    margin-bottom: 2em;
+  }
+
+  picture {
+    margin-top: 2em;
+    margin-bottom: 2em;
+  }
+
+  picture > img {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  video {
+    margin-top: 2em;
+    margin-bottom: 2em;
+  }
+
+  kbd {
+    font-size: 0.875em;
+    border-radius: 5px;
+    padding-top: 0.1875em;
+    padding-inline-end: 0.375em;
+    padding-bottom: 0.1875em;
+    padding-inline-start: 0.375em;
+  }
+
+  code {
+    font-size: 0.875em;
+  }
+
+  h2 code {
+    font-size: 0.875em;
+  }
+
+  h3 code {
+    font-size: 0.9em;
+  }
+
+  pre {
+    font-size: 0.875em;
+    line-height: 1.714;
+    margin-top: 1.714em;
+    margin-bottom: 1.714em;
+    border-radius: 6px;
+    padding-top: 0.857em;
+    padding-inline-end: 1.143em;
+    padding-bottom: 0.857em;
+    padding-inline-start: 1.143em;
+  }
+
+  ol {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+    padding-inline-start: 1.625em;
+  }
+
+  ul {
+    list-style-type: disc;
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+    padding-inline-start: 1.625em;
+  }
+
+  li {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+
+  ol > li {
+    padding-inline-start: 0.375em;
+  }
+
+  ul > li {
+    padding-inline-start: 0.375em;
+  }
+
+  > ul > li p {
+    margin-top: 0.75em;
+    margin-bottom: 0.75em;
+  }
+
+  > ul > li > p:first-child {
+    margin-top: 1.25em;
+  }
+
+  > ul > li > p:last-child {
+    margin-bottom: 1.25em;
+  }
+
+  > ol > li > p:first-child {
+    margin-top: 1.25em;
+  }
+
+  > ol > li > p:last-child {
+    margin-bottom: 1.25em;
+  }
+
+  ul ul, ul ol, ol ul, ol ol {
+    margin-top: 0.75em;
+    margin-bottom: 0.75em;
+  }
+
+  dl {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+  }
+
+  dt {
+    margin-top: 1.25em;
+  }
+
+  dd {
+    margin-top: 0.5em;
+    padding-inline-start: 1.625em;
+  }
+
+  hr {
+    margin-top: 3em;
+    margin-bottom: 3em;
+  }
+
+  hr + * {
+    margin-top: 0;
+  }
+
+  h2 + * {
+    margin-top: 0;
+  }
+
+  h3 + * {
+    margin-top: 0;
+  }
+
+  h4 + * {
+    margin-top: 0;
+  }
+
+  table {
+    font-size: 0.875em;
+    line-height: 1.714;
+  }
+
+  thead th {
+    padding-inline-end: 0.571em;
+    padding-bottom: 0.571em;
+    padding-inline-start: 0.571em;
+  }
+
+  thead th:first-child {
+    padding-inline-start: 0;
+  }
+
+  thead th:last-child {
+    padding-inline-end: 0;
+  }
+
+  tbody td, tfoot td {
+    padding-top: 0.571em;
+    padding-inline-end: 0.571em;
+    padding-bottom: 0.571em;
+    padding-inline-start: 0.571em;
+  }
+
+  tbody td:first-child, tfoot td:first-child {
+    padding-inline-start: 0;
+  }
+
+  tbody td:last-child, tfoot td:last-child {
+    padding-inline-end: 0;
+  }
+
+  figure {
+    margin-top: 2em;
+    margin-bottom: 2em;
+  }
+
+  figure > * {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  figcaption {
+    font-size: 0.875em;
+    line-height: 1.429;
+    margin-top: 0.857em;
+  }
+
+  /* General spacing utilities */
+  :is(article, section, div, main) > :first-child {
+    margin-top: 0;
+  }
+
+  :is(article, section, div, main) > :last-child {
+    margin-bottom: 0;
+  }
+}

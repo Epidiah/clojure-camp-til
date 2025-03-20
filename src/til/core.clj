@@ -74,12 +74,12 @@
                   (sort-by :post/created-at)
                   reverse)
              :let [user-email (get-in post [:user/_post 0 :user/email])]]
-              [:section.p-4.rounded.border
-               [:div (-> content
-                         md/parse
-                         md.transform/->hiccup)]
-               [:div (str created-at)]
-               [:div user-email]])]]]))
+            [:section.p-4.rounded.border.prose
+             [:div (-> content
+                       md/parse
+                       md.transform/->hiccup)]
+             [:div (str created-at)]
+             [:div user-email]])]]]))
 
 (defn create-post! [content user-id]
   (d/transact! @conn [{:post/content    content
@@ -95,7 +95,9 @@
           (= "/styles.css" (:uri req)))
      {:status  200
       :headers {"Content-Type" "text/css"}
-      :body    (slurp (io/resource "twstyles.css"))}
+      :body    (str (slurp (io/resource "twstyles.css"))
+                    "\n"
+                    (slurp (io/resource "public/markdown.css")))}
 
      (and (= :post (:request-method req))
           (= "/" (:uri req)))
