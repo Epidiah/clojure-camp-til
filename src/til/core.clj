@@ -1,6 +1,7 @@
 (ns til.core
   (:gen-class)
   (:require
+   [clojure.string :as str]
    [clojure.java.io :as io]
    [til.config :as config]
    [til.oauth :as oauth]
@@ -43,35 +44,71 @@
 
 (def conn (delay (d/get-conn "./db" schema)))
 
+(defn rand-in-range [low high]
+  (+ low (rand (- high low))))
+
+(defn star-field-view [w h]
+  (let [star-count 300
+        base-star-size 12]
+    [:svg.star-field
+     {:xmlns "http://www.w3.org/2000/svg"
+      :width "100%"
+      :height "100%"
+      :preserveAspectRatio "xMidYMid slice"
+      :viewBox (str/join " " [0 0 w h])}
+     (into [:g]
+           (repeatedly
+             star-count
+             (fn []
+               [:circle {:cx (rand-in-range 0 w)
+                         :cy (rand-in-range 0 h)
+                         :r (* base-star-size
+                               (rand-nth (concat
+                                           (repeat 5 0.05)
+                                           (repeat 5 0.075)
+                                           (repeat 4 0.01)
+                                           (repeat 3 0.15)
+                                           (repeat 2 0.02)
+                                           (repeat 1 0.025))))
+                         :fill "#fff"}])))]))
+
 (defn index-page [user-id]
   (let [user (when user-id
                (d/q '[:find (pull ?user [*]) .
-                     :in $ ?id
-                     :where
-                     [?user :user/id ?id]]
+                      :in $ ?id
+                      :where
+                      [?user :user/id ?id]]
                    (d/db @conn)
                    user-id))]
     [:html
      [:head
       [:link {:rel "stylesheet" :href "/styles.css"}]]
-     [:body
+     [:body.text-white
+      {:class "bg-#181742"}
+      [:div.absolute.inset-0
+       {:style {:z-index -1}}
+       (star-field-view 1000 1000)]
       (if user
         [:div.flex.gap-1
          [:div (:user/email user)]
          [:form {:method "post"
                  :action "/session/delete"}
           [:button "×"]]]
-        [:form {:method "get"
-                :action "/session/new"}
+        [:form
+         {:method "get"
+           :action "/session/new"}
          [:input {:hidden true
                   :name   "email"
                   :value  "alice@example.com"}]
          [:button "Log In"]])
       (when user
-        [:form {:method "post"}
-         [:textarea {:name "content"}]
-         [:button "Submit"]])
-      [:div.space-y-4.mx-4
+        [:form.p-8
+         {:method "post"}
+         [:textarea.border.w-full.h-10em.p-2
+          {:name "content"
+           :class "bg-#0a0a2daa"}]
+         [:div.text-right [:button "Submit"]]])
+      [:div.space-y-4.mx-8
        (for [{:post/keys [content created-at] :as post}
              (->> (d/q '[:find [(pull ?e [* {:user/_post [:user/email]}]) ...]
                          :where
@@ -80,12 +117,15 @@
                   (sort-by :post/created-at)
                   reverse)
              :let [user-email (get-in post [:user/_post 0 :user/email])]]
-            [:section.p-4.rounded.border.prose
-             [:div (-> content
-                       md/parse
-                       md.transform/->hiccup)]
-             [:div (str created-at)]
-             [:div user-email]])]]]))
+            [:section
+             [:div.p-4.rounded.border.prose
+              {:class "bg-#0a0a2daa"}
+              (-> content
+                  md/parse
+                  md.transform/->hiccup)]
+             [:div.flex.gap-2.justify-end
+              [:div (str created-at)]
+              [:div user-email]]])]]]))
 
 (defn create-post! [content user-id]
   (d/transact! @conn [{:post/content    content
