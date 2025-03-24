@@ -8,6 +8,7 @@
    [huff2.core :as h]
    [datalevin.core :as d]
    [girouette.processor]
+   [nextjournal.beholder :as beholder]
    [nextjournal.markdown :as md]
    [nextjournal.markdown.transform :as md.transform]
    [ring.middleware.session.cookie :refer [cookie-store]]
@@ -22,6 +23,11 @@
 
 (defn compile-css! [] (girouette.processor/process css-opts))
 
+(defn watch-css!
+  []
+  ;; New girouette uses a blocking watcher
+  (with-redefs [beholder/watch-blocking #'beholder/watch]
+    (girouette.processor/process (assoc css-opts :watch? true))))
 (defonce server (atom nil))
 
 (def schema {:post/content    {:db/valueType :db.type/string}
@@ -151,6 +157,9 @@
 (comment
 
   (compile-css!)
+
+  (watch-css!)
+
   (start!)
   (d/q '[:find [(pull ?e [*]) ...]
                      :where
