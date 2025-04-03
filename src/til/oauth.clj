@@ -45,8 +45,8 @@
 (comment
   (nonce-generate)
   (nonce-check (nonce-generate))
-  (nonce-check "random")
- )
+  (nonce-check "random"))
+ 
 
 (defn request-token-url [{:keys [client-id redirect-uri]}]
   (str "https://github.com/login/oauth/authorize?"
@@ -80,7 +80,16 @@
              first
              :email))))
 
-(defn get-or-create-user! [conn email]
+(defn get-user [oauth-config code]
+  (let [token (get-access-token oauth-config code)]
+    (-> @(http/request
+          {:method :get
+           :headers {"Authorization" (str "Bearer " token)}
+           :url "https://api.github.com/user/user"})
+        :body
+        (json/read-str :key-fn keyword))))
+
+(defn get-or-create-user! [conn {:keys [email name avatar-url]}]
   (or (d/q '[:find ?id .
              :in $ ?email
              :where
@@ -90,7 +99,9 @@
            email)
       (let [id (random-uuid)]
         (d/transact! conn [{:user/id    id
-                            :user/email email}])
+                            :user/email email
+                            :user/name name
+                            :user/avatar-url avatar-url}])
         id)))
 
 (defn prod-handler [req]
@@ -99,15 +110,18 @@
     (if-let [code (get-in req [:params :code])]
       (if (nonce-check (get-in req [:params :state]))
         (if-let [email (get-email (oauth-config) code)]
-          (if-let [user-id (get-or-create-user!
-                            (:db-conn req)
-                            email)]
-            {:status  302
-             :headers {"Location" "/"}
-             :session {:user-id user-id}}
-            {:status  401
-             :headers {"Content-Type" "text/plain"}
-             :body    "User denied"})
+          (let [{:keys [login avatar_url]} (get-user (oauth-config) code)]
+            (if-let [user-id (get-or-create-user!
+                              (:db-conn req)
+                              {:email email
+                               :name login
+                               :avatar-url avatar_url})]
+              {:status  302
+               :headers {"Location" "/"}
+               :session {:user-id user-id}}
+              {:status  401
+               :headers {"Content-Type" "text/plain"}
+               :body    "User denied"}))
           {:status  401
            :headers {"Content-Type" "text/plain"}
            :body    "User could not be authenticated with Google"})
@@ -120,12 +134,12 @@
 (defn dev-handler [req]
  (when (and (= :get (:request-method req))
             (= redirect-uri (:uri req)))
-   (let [user-id (get-or-create-user! (:db-conn req) (:dummy-email (oauth-config)))]
+   (let [user-id (get-or-create-user! (:db-conn req) (:dummy-user (oauth-config)))]
      {:status 302
-     :headers {"Location" "/"}
-     :session {:user-id user-id}})))
+      :headers {"Location" "/"}
+      :session {:user-id user-id}})))
 
 (defn handler [req]
-  (if (:dummy-email (oauth-config))
+  (if (:dummy-user (oauth-config))
     (dev-handler req)
     (prod-handler req)))

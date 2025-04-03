@@ -13,7 +13,14 @@
    [nextjournal.markdown :as md]
    [nextjournal.markdown.transform :as md.transform]
    [ring.middleware.session.cookie :refer [cookie-store]]
-   [ring.middleware.defaults :as rmd]))
+   [ring.middleware.defaults :as rmd])
+  (:import
+    [java.time.format DateTimeFormatter]
+    [java.time ZoneId]))
+
+(defn format-inst [inst]
+  (.format (.atZone (.toInstant inst) (ZoneId/of "America/Toronto"))
+         (DateTimeFormatter/ofPattern "yyyy-MM-dd")))
 
 (def css-opts
   {:css {:output-file "target/public/twstyles.css"}
@@ -40,7 +47,9 @@
              :user/post       {:db/valueType   :db.type/ref
                                :db/cardinality :db.cardinality/many}
              :user/email      {:db/valueType :db.type/string
-                               :db/unique    :db.unique/identity}})
+                               :db/unique    :db.unique/identity}
+             :user/name       {:db/valueType :db.type/string}
+             :user/avatar-url {:db/valueType :db.type/string}})
 
 (def conn (delay (d/get-conn "./db" schema)))
 
@@ -90,7 +99,7 @@
        (star-field-view 1000 1000)]
       (if user
         [:div.flex.gap-1
-         [:div (:user/email user)]
+         [:div (:user/name user)]
          [:form {:method "post"
                  :action "/session/delete"}
           [:button "×"]]]
@@ -110,22 +119,25 @@
          [:div.text-right [:button "Submit"]]])
       [:div.space-y-4.mx-8
        (for [{:post/keys [content created-at] :as post}
-             (->> (d/q '[:find [(pull ?e [* {:user/_post [:user/email]}]) ...]
+             (->> (d/q '[:find [(pull ?e [* {:user/_post
+                                             [:user/name :user/avatar-url]}]) ...]
                          :where
                          [?e :post/content _]]
                        (d/db @conn))
                   (sort-by :post/created-at)
                   reverse)
-             :let [user-email (get-in post [:user/_post 0 :user/email])]]
+             :let [user (get-in post [:user/_post 0])]]
             [:section
              [:div.p-4.rounded.border.prose
               {:class "bg-#0a0a2daa"}
               (-> content
                   md/parse
                   md.transform/->hiccup)]
-             [:div.flex.gap-2.justify-end
-              [:div (str created-at)]
-              [:div user-email]]])]]]))
+             [:div.flex.gap-2.justify-end.items-center
+              [:div (format-inst created-at)]
+              [:img {:src (:user/avatar-url user)
+                     :style {:width "1em" :height "1em"}}]
+              [:div (:user/name user)]]])]]]))
 
 (defn create-post! [content user-id]
   (d/transact! @conn [{:post/content    content
@@ -196,13 +208,30 @@
 
 (comment
 
+  (d/transact @conn
+              (map (fn [e] [:db/retractEntity e])
+                   (d/q '[:find [?e ...]
+                          :where [?e  ]] (d/db @conn))))
   (compile-css!)
 
   (watch-css!)
 
   (start!)
+
   (d/q '[:find [(pull ?e [*]) ...]
-                     :where
-                     [?e :post/content _]]
-                   (d/db @conn))
-  )
+               :where
+               [?e _ _]]
+        (d/db @conn))
+
+  (d/q '[:find [(pull ?e [* {:user/_post [:user/email]}]) ...]
+               :where
+               [?e :post/content _]]
+       (d/db @conn))
+
+  (d/q '[:find (pull ?user [*]) .
+                    :in $ ?id
+                    :where
+                    [?user :user/id ?id]]
+        (d/db @conn)
+        nil))
+  

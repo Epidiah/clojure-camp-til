@@ -15,7 +15,10 @@
              [:client-secret :string]
              [:domain :string]]
             [:map
-             [:dummy-email :string]]]]])
+             [:dummy-user [:map
+                           [:email :string]
+                           [:name :string]
+                           [:avatar-url :string]]]]]]])
 
 (def config
   (delay
@@ -32,5 +35,5 @@
 
 (comment
   ;; for generating :cookie-secret
-  (vec (crypto.random/bytes 16))
-)
+  (vec (crypto.random/bytes 16)))
+
